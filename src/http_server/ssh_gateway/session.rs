@@ -8,7 +8,7 @@ use tokio::{
     sync::Mutex,
 };
 
-use super::ssh_message::SSHMessage;
+use super::{ssh_message::SSHMessage, stop_message::StopSession};
 
 type Reader = ReadHalf<AsyncChannel<TcpStream>>;
 type Writer = WriteHalf<AsyncChannel<TcpStream>>;
@@ -80,7 +80,11 @@ impl actix::Actor for Session {
                 match reader.lock().await.read(&mut buf).await {
                     Ok(0) => log::debug!("SSH Session: Read EOF"),
                     Ok(n) => address.do_send(SSHMessage::from(&buf[..n])),
-                    Err(err) => log::error!("SSH Session: Failed to read bytes: {}", err),
+                    Err(err) => {
+                        log::error!("SSH Session: Failed to read bytes: {}", err);
+                        address.do_send(StopSession {});
+                        break;
+                    }
                 }
             }
         });
@@ -148,5 +152,13 @@ impl actix::Handler<SSHMessage> for Session {
 
     fn handle(&mut self, msg: SSHMessage, ctx: &mut Self::Context) -> Self::Result {
         ctx.binary(msg.data);
+    }
+}
+
+impl actix::Handler<StopSession> for Session {
+    type Result = ();
+
+    fn handle(&mut self, _msg: StopSession, ctx: &mut Self::Context) -> Self::Result {
+        ctx.close(None);
     }
 }

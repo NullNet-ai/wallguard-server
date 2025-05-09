@@ -5,6 +5,7 @@
 
 mod session;
 mod ssh_message;
+mod stop_message;
 
 use crate::app_context::AppContext;
 use actix_web::{
