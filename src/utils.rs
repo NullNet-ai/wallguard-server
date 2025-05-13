@@ -9,7 +9,6 @@ pub fn digest(input: &str) -> String {
     format!("{:x}", md5::compute(input))
 }
 
-
 pub static ACCOUNT_ID: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     std::env::var("ACCOUNT_ID").unwrap_or_else(|_| {
         log::warn!("ACCOUNT_ID environment variable not set");

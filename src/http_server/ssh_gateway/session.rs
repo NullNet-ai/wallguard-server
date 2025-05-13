@@ -14,8 +14,6 @@ type Reader = ReadHalf<AsyncChannel<TcpStream>>;
 type Writer = WriteHalf<AsyncChannel<TcpStream>>;
 
 pub(super) struct Session {
-    session: AsyncSession<TcpStream>,
-
     reader: Arc<Mutex<Reader>>,
     writer: Arc<Mutex<Writer>>,
 }
@@ -50,7 +48,7 @@ impl Session {
 
         session
             .authenticated()
-            .then(|| ())
+            .then_some(())
             .ok_or("SSH Session authentication failed")
             .handle_err(location!())?;
 
@@ -66,7 +64,6 @@ impl Session {
         let (reader, writer) = tokio::io::split(channel);
 
         Ok(Self {
-            session,
             reader: Arc::new(Mutex::new(reader)),
             writer: Arc::new(Mutex::new(writer)),
         })

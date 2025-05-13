@@ -85,8 +85,11 @@ message ControlChannelRequest {
   string session_type = 2;
 }
 
+// TODO: Refactor
 message ControlChannelResponse {
   string id = 1;
   string type = 2;
   optional string protocol = 3;
+  optional string ssh_key = 4;
+  optional int32 ssh_port = 5;
 }

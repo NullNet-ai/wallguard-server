@@ -1,6 +1,7 @@
 use crate::{datastore::DatastoreWrapper, ssh_keypair::SSHKeypair};
 use nullnet_libdatastore::{CreateBody, CreateParams, CreateRequest, Query};
 use nullnet_liberror::{Error, ErrorHandler, Location, location};
+use serde_json::json;
 
 impl DatastoreWrapper {
     pub async fn create_ssh_keypair_if_not_exists(
@@ -18,6 +19,9 @@ impl DatastoreWrapper {
 
         let keypair = SSHKeypair::generate().await?;
 
+        let mut json = serde_json::to_value(&keypair).handle_err(location!())?;
+        json["device_id"] = json!(device_id);
+
         let request = CreateRequest {
             params: Some(CreateParams {
                 table: String::from("device_ssh_keys"),
@@ -27,13 +31,13 @@ impl DatastoreWrapper {
                 durability: String::from("hard"),
             }),
             body: Some(CreateBody {
-                record: serde_json::to_string(&keypair).handle_err(location!())?,
+                record: serde_json::to_string(&json).handle_err(location!())?,
                 entity_prefix: String::from("SSH"),
             }),
         };
 
         let _ = self.inner.clone().create(request, token).await?;
-        
+
         Ok(())
     }
 }

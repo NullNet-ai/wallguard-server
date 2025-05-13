@@ -64,7 +64,7 @@ async fn stream_impl(
                             .is_some();
 
                         let remote_ssh_enabled = tunnel
-                            .get_profile_by_device_id(&device_id, &RAType::SSH)
+                            .get_profile_by_device_id(&device_id, &RAType::Ssh)
                             .await
                             .is_some();
                         (remote_shell_enabled, remote_ui_enabled, remote_ssh_enabled)

@@ -63,7 +63,7 @@ pub async fn remote_access_request(
         .await
         .unwrap_or(String::from("https"));
 
-    if ra_type == RAType::SSH
+    if ra_type == RAType::Ssh
         && context
             .datastore
             .create_ssh_keypair_if_not_exists(&body.device_id, jwt_token)

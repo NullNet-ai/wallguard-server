@@ -92,6 +92,7 @@ pub struct ControlChannelRequest {
     #[prost(string, tag = "2")]
     pub session_type: ::prost::alloc::string::String,
 }
+/// TODO: Refactor
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ControlChannelResponse {
     #[prost(string, tag = "1")]
@@ -100,6 +101,10 @@ pub struct ControlChannelResponse {
     pub r#type: ::prost::alloc::string::String,
     #[prost(string, optional, tag = "3")]
     pub protocol: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "4")]
+    pub ssh_key: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(int32, optional, tag = "5")]
+    pub ssh_port: ::core::option::Option<i32>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

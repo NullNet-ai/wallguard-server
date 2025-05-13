@@ -20,7 +20,7 @@ impl SSHKeypair {
         let passphrase = Self::random_passphrase(32);
 
         let status = Command::new("ssh-keygen")
-            .args(&[
+            .args([
                 "-t",
                 "ed25519",
                 "-f",
