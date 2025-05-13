@@ -61,6 +61,8 @@ impl WallGuardImpl {
                     return Err("Failed to fetch SSH key").handle_err(location!());
                 }
 
+                // @TODO: fetch actual port
+
                 (Some(ssh_keypair.unwrap().public_key.clone()), Some(22))
             }
         };
