@@ -7,18 +7,15 @@ mod session;
 mod ssh_message;
 mod stop_message;
 
+use super::common::extract_session_from_request;
 use crate::app_context::AppContext;
+use crate::utils::{ACCOUNT_ID, ACCOUNT_SECRET};
 use actix_web::{
     HttpRequest, HttpResponse,
     web::{Data, Payload},
 };
 use nullnet_libtunnel::Profile;
 use session::Session;
-
-use super::common::extract_session_from_request;
-
-/// @TODO: Remove. Only for development.
-const DEV_SSH_ADDR: &str = "192.168.2.46:22";
 
 pub(super) async fn open_ssh_session(
     request: HttpRequest,
@@ -42,13 +39,29 @@ pub(super) async fn open_ssh_session(
 
     let device_id = profile.device_id();
 
-    // Get keypair from the datastore
+    let Ok(token) = context
+        .datastore
+        .login(ACCOUNT_ID.to_string(), ACCOUNT_SECRET.to_string())
+        .await
+    else {
+        return Ok(HttpResponse::InternalServerError().body("Datastore login failed"));
+    };
 
-    let target = profile.get_visitor_addr();
-    let token = profile.get_visitor_token();
+    let Some(ssh_keypair) = context
+        .datastore
+        .fetch_ssh_keypair_for_device(&device_id, &token)
+        .await
+    else {
+        return Ok(HttpResponse::InternalServerError()
+            .body("There is no SSH keypair assosiated with the device"));
+    };
 
-    todo!()
+    let visitor_addr = profile.get_visitor_addr();
+    let visitor_token = profile.get_visitor_token();
 
-    // let session = Session::new(DEV_SSH_ADDR.parse().unwrap()).await.unwrap();
-    // actix_web_actors::ws::start(session, &request, body)
+    let Ok(session) = Session::new(visitor_addr, visitor_token, &ssh_keypair).await else {
+        return Ok(HttpResponse::InternalServerError().body("Failed to create a SSH session"));
+    };
+
+    actix_web_actors::ws::start(session, &request, body)
 }

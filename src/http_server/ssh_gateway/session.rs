@@ -1,7 +1,7 @@
 use super::{ssh_message::SSHMessage, stop_message::StopSession};
-use crate::http_server::proxy::auth::authenticate;
+use crate::{http_server::proxy::auth::authenticate, ssh_keypair::SSHKeypair};
 use actix::{AsyncContext, StreamHandler};
-use async_ssh2_lite::{AsyncChannel, AsyncSession, async_io::Async};
+use async_ssh2_lite::{AsyncChannel, AsyncSession};
 use nullnet_liberror::{Error, ErrorHandler, Location, location};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{
@@ -24,8 +24,7 @@ impl Session {
     pub async fn new(
         addr: SocketAddr,
         visitor_token: Option<String>,
-        public_key: &str,
-        private_key: &str,
+        key: &SSHKeypair,
     ) -> Result<Self, Error> {
         let mut stream = TcpStream::connect(addr).await.handle_err(location!())?;
 
@@ -40,23 +39,14 @@ impl Session {
         session.handshake().await.handle_err(location!())?;
 
         session
-            .userauth_pubkey_memory("root", Some(public_key), private_key, None)
+            .userauth_pubkey_memory(
+                "root",
+                Some(&key.public_key),
+                &key.private_key,
+                Some(&key.passphrase),
+            )
             .await
             .handle_err(location!())?;
-
-        // #[cfg(debug_assertions)]
-        // {
-        //     // @TODO: This code should be removed.
-        //     session
-        //         .userauth_password("root", "pfsense")
-        //         .await
-        //         .handle_err(location!())?;
-        // }
-
-        // #[cfg(not(debug_assertions))]
-        // {
-        //     todo!("SSH authentication is not implmemented yet");
-        // }
 
         session
             .authenticated()

@@ -4,13 +4,14 @@ use serde::{Deserialize, Serialize};
 use tokio::{fs, process::Command};
 
 const WALLGUARD_SYSTEM_EMAIL: &str = "wallguard-system@nullnet.ai";
-const PRIVATE_KEY_PATH: &str = "./id_ed25519";
-const PUBLIC_KEY_PATH: &str = "./id_ed25519.pub";
+// @TODO: Generate Random Filename to avoid collisions
+const PRIVATE_KEY_PATH: &str = "/tmp/id_ed25519";
+const PUBLIC_KEY_PATH: &str = "/tmp/id_ed25519.pub";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SSHKeypair {
-    pub public: String,
-    pub private: String,
+    pub public_key: String,
+    pub private_key: String,
     pub passphrase: String,
 }
 
@@ -53,8 +54,8 @@ impl SSHKeypair {
             .handle_err(location!())?;
 
         Ok(Self {
-            public: public_key,
-            private: private_key,
+            public_key,
+            private_key,
             passphrase,
         })
     }
@@ -81,8 +82,8 @@ mod tests {
 
         let keypair = keypair.unwrap();
 
-        assert!(!keypair.public.is_empty());
-        assert!(!keypair.private.is_empty());
+        assert!(!keypair.public_key.is_empty());
+        assert!(!keypair.private_key.is_empty());
         assert!(!keypair.passphrase.is_empty());
 
         assert!(!fs::metadata(PRIVATE_KEY_PATH).await.is_ok());
