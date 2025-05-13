@@ -1,3 +1,4 @@
+mod common;
 mod proxy;
 mod remote_access_request;
 mod remote_access_terminate;

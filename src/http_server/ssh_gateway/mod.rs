@@ -12,7 +12,10 @@ use actix_web::{
     HttpRequest, HttpResponse,
     web::{Data, Payload},
 };
+use nullnet_libtunnel::Profile;
 use session::Session;
+
+use super::common::extract_session_from_request;
 
 /// @TODO: Remove. Only for development.
 const DEV_SSH_ADDR: &str = "192.168.2.46:22";
@@ -22,6 +25,30 @@ pub(super) async fn open_ssh_session(
     context: Data<AppContext>,
     body: Payload,
 ) -> actix_web::Result<HttpResponse> {
-    let session = Session::new(DEV_SSH_ADDR.parse().unwrap()).await.unwrap();
-    actix_web_actors::ws::start(session, &request, body)
+    let Some(session) = extract_session_from_request(&request) else {
+        return Ok(HttpResponse::NotFound().body(""));
+    };
+
+    let Some(profile) = context
+        .tunnel
+        .lock()
+        .await
+        .get_profile_if_online_by_public_session_id(&session)
+        .await
+        .cloned()
+    else {
+        return Ok(HttpResponse::NotFound().body(""));
+    };
+
+    let device_id = profile.device_id();
+
+    // Get keypair from the datastore
+
+    let target = profile.get_visitor_addr();
+    let token = profile.get_visitor_token();
+
+    todo!()
+
+    // let session = Session::new(DEV_SSH_ADDR.parse().unwrap()).await.unwrap();
+    // actix_web_actors::ws::start(session, &request, body)
 }

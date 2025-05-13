@@ -21,6 +21,8 @@ pub struct HeartbeatResponse {
     #[prost(bool, tag = "4")]
     pub remote_ui_enabled: bool,
     #[prost(bool, tag = "5")]
+    pub remote_ssh_enabled: bool,
+    #[prost(bool, tag = "6")]
     pub is_monitoring_enabled: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

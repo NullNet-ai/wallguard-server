@@ -1,5 +1,7 @@
+use super::{ssh_message::SSHMessage, stop_message::StopSession};
+use crate::http_server::proxy::auth::authenticate;
 use actix::{AsyncContext, StreamHandler};
-use async_ssh2_lite::{AsyncChannel, AsyncSession};
+use async_ssh2_lite::{AsyncChannel, AsyncSession, async_io::Async};
 use nullnet_liberror::{Error, ErrorHandler, Location, location};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{
@@ -7,8 +9,6 @@ use tokio::{
     net::TcpStream,
     sync::Mutex,
 };
-
-use super::{ssh_message::SSHMessage, stop_message::StopSession};
 
 type Reader = ReadHalf<AsyncChannel<TcpStream>>;
 type Writer = WriteHalf<AsyncChannel<TcpStream>>;
@@ -21,26 +21,42 @@ pub(super) struct Session {
 }
 
 impl Session {
-    pub async fn new(addr: SocketAddr) -> Result<Self, Error> {
-        let mut session = AsyncSession::<TcpStream>::connect(addr, None)
-            .await
-            .handle_err(location!())?;
+    pub async fn new(
+        addr: SocketAddr,
+        visitor_token: Option<String>,
+        public_key: &str,
+        private_key: &str,
+    ) -> Result<Self, Error> {
+        let mut stream = TcpStream::connect(addr).await.handle_err(location!())?;
 
-        session.handshake().await.handle_err(location!())?;
-
-        #[cfg(debug_assertions)]
-        {
-            // @TODO: This code should be removed.
-            session
-                .userauth_password("root", "pfsense")
+        if let Some(token) = visitor_token {
+            authenticate(&mut stream, &token)
                 .await
                 .handle_err(location!())?;
         }
 
-        #[cfg(not(debug_assertions))]
-        {
-            todo!("SSH authentication is not implmemented yet");
-        }
+        let mut session = AsyncSession::new(stream, None).handle_err(location!())?;
+
+        session.handshake().await.handle_err(location!())?;
+
+        session
+            .userauth_pubkey_memory("root", Some(public_key), private_key, None)
+            .await
+            .handle_err(location!())?;
+
+        // #[cfg(debug_assertions)]
+        // {
+        //     // @TODO: This code should be removed.
+        //     session
+        //         .userauth_password("root", "pfsense")
+        //         .await
+        //         .handle_err(location!())?;
+        // }
+
+        // #[cfg(not(debug_assertions))]
+        // {
+        //     todo!("SSH authentication is not implmemented yet");
+        // }
 
         session
             .authenticated()

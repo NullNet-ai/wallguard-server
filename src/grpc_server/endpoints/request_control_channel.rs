@@ -36,7 +36,7 @@ impl WallGuardImpl {
         drop(tunnel_lock);
 
         let protocol = match ra_type {
-            RAType::Shell => None,
+            RAType::Shell | RAType::SSH => None,
             RAType::UI => {
                 let protocol = self
                     .context
