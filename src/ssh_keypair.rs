@@ -4,9 +4,6 @@ use serde::{Deserialize, Serialize};
 use tokio::{fs, process::Command};
 
 const WALLGUARD_SYSTEM_EMAIL: &str = "wallguard-system@nullnet.ai";
-// @TODO: Generate Random Filename to avoid collisions
-const PRIVATE_KEY_PATH: &str = "/tmp/id_ed25519";
-const PUBLIC_KEY_PATH: &str = "/tmp/id_ed25519.pub";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SSHKeypair {
@@ -19,12 +16,17 @@ impl SSHKeypair {
     pub async fn generate() -> Result<Self, Error> {
         let passphrase = Self::random_passphrase(32);
 
+        let suffix = Self::random_passphrase(16);
+
+        let private_key_path = format!("/tmp/id_ed25519_{suffix}");
+        let public_key_path = format!("/tmp/id_ed25519_{suffix}.pub");
+
         let status = Command::new("ssh-keygen")
             .args([
                 "-t",
                 "ed25519",
                 "-f",
-                PRIVATE_KEY_PATH,
+                &private_key_path,
                 "-C",
                 WALLGUARD_SYSTEM_EMAIL,
                 "-N",
@@ -38,18 +40,18 @@ impl SSHKeypair {
             return Err("Failed to generate SSH keypair with ssh-keygen").handle_err(location!());
         }
 
-        let private_key = fs::read_to_string(PRIVATE_KEY_PATH)
+        let private_key = fs::read_to_string(&private_key_path)
             .await
             .handle_err(location!())?;
 
-        let public_key = fs::read_to_string(PUBLIC_KEY_PATH)
+        let public_key = fs::read_to_string(&public_key_path)
             .await
             .handle_err(location!())?;
 
-        fs::remove_file(PRIVATE_KEY_PATH)
+        fs::remove_file(&private_key_path)
             .await
             .handle_err(location!())?;
-        fs::remove_file(PUBLIC_KEY_PATH)
+        fs::remove_file(&public_key_path)
             .await
             .handle_err(location!())?;
 
@@ -72,7 +74,6 @@ impl SSHKeypair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::fs;
 
     #[tokio::test]
     async fn test_generate_keypair() {
@@ -85,8 +86,5 @@ mod tests {
         assert!(!keypair.public_key.is_empty());
         assert!(!keypair.private_key.is_empty());
         assert!(!keypair.passphrase.is_empty());
-
-        assert!(!fs::metadata(PRIVATE_KEY_PATH).await.is_ok());
-        assert!(!fs::metadata(PUBLIC_KEY_PATH).await.is_ok());
     }
 }
