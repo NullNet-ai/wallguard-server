@@ -1,59 +1,76 @@
+use crate::datastore::DatastoreWrapperExperimental;
+use crate::proto::wallguard::wall_guard_server;
 use crate::{
     grpc_server::server::WallGuardImpl,
     parser::{msg_parser::parse_message, parsed_message::ParsedRecord},
     proto::wallguard::{CommonResponse, Packets},
 };
 use nullnet_libdatastore::store::{self};
-use nullnet_liberror::Error;
 use tonic::codegen::tokio_stream::StreamExt;
-use tonic::{Request, Response, Streaming};
+use tonic::{Request, Response, Status, Streaming};
 
 impl WallGuardImpl {
     pub(crate) async fn handle_packets_impl(
         &self,
         request: Request<Streaming<Packets>>,
-    ) -> Result<Response<CommonResponse>, Error> {
+    ) -> Result<
+        Response<<WallGuardImpl as wall_guard_server::WallGuard>::HandlePacketsStream>,
+        Status,
+    > {
         let mut stream = request.into_inner();
 
-        while let Some(packets_res) = stream.next().await {
-            let Ok(packets) = packets_res else {
-                continue;
-            };
+        let ip_info_tx = self.ip_info_tx.clone();
+        let ds = self.context.datastore.clone();
+        let ds_exp = self.context.datastore_exp.clone();
 
-            let (jwt_token, token_info) = Self::authenticate(&packets.token)?;
+        let output = async_stream::try_stream! {
+            while let Some(packets_res) = stream.next().await {
+                let Ok(packets) = packets_res else {
+                    continue;
+                };
 
-            log::info!("Received {} packets.", packets.packets.len());
-            let parsed_message = parse_message(packets, &token_info, &self.ip_info_tx);
-            log::info!("Parsed {} connections.", parsed_message.records.len());
+                let (jwt_token, token_info) = Self::authenticate(&packets.token).
+                map_err(|e| Status::internal(format!("{e:?}")))?;
 
-            if parsed_message.records.is_empty() {
-                return Ok(Response::new(CommonResponse {
-                    message:
-                        "No valid connections in the message (skipping insertion to datastore)"
-                            .to_string(),
-                }));
+                log::info!("Received {} packets.", packets.packets.len());
+                let parsed_message = parse_message(packets, &token_info, &ip_info_tx);
+                log::info!("Parsed {} connections.", parsed_message.records.len());
+
+                if parsed_message.records.is_empty() {
+                    yield CommonResponse {
+                        message:
+                            "No valid connections in the message (skipping insertion to datastore)"
+                                .to_string(),
+                    };
+                }
+
+                Self::experimental_create_connections(ds_exp.clone(), &parsed_message.records)
+                    .await;
+
+                let _ = ds
+                    .connections_insert(&jwt_token, parsed_message)
+                    .await.map_err(|e| Status::internal(format!("{e:?}")))?;
+
+                yield CommonResponse {
+                    message: String::from("Connections inserted successfully"),
+                };
             }
+        };
 
-            self.experimental_create_connections(&parsed_message.records)
-                .await;
-
-            let _ = self
-                .context
-                .datastore
-                .connections_insert(&jwt_token, parsed_message)
-                .await?;
-        }
-
-        Ok(Response::new(CommonResponse {
-            message: String::from("Client-side packets streaming completed"),
-        }))
+        Ok(Response::new(
+            Box::pin(output)
+                as <WallGuardImpl as wall_guard_server::WallGuard>::HandlePacketsStream,
+        ))
     }
 
     /**
      * This code is to be removed
      */
-    async fn experimental_create_connections(&self, connections: &[ParsedRecord]) {
-        if self.context.datastore_exp.is_none() || connections.is_empty() {
+    async fn experimental_create_connections(
+        ds_exp: Option<DatastoreWrapperExperimental>,
+        connections: &[ParsedRecord],
+    ) {
+        if ds_exp.is_none() || connections.is_empty() {
             return;
         }
 
@@ -126,15 +143,7 @@ impl WallGuardImpl {
 
         let timestamp = chrono::Utc::now();
 
-        match self
-            .context
-            .datastore_exp
-            .clone()
-            .unwrap()
-            .inner
-            .create_connections(request)
-            .await
-        {
+        match ds_exp.unwrap().inner.create_connections(request).await {
             Ok(response) => {
                 let diff = chrono::Utc::now() - timestamp;
                 log::info!(

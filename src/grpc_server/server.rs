@@ -5,7 +5,9 @@ use crate::proto::wallguard::{
     wall_guard_server::WallGuard,
 };
 use crate::proto::wallguard::{ControlChannelRequest, ControlChannelResponse};
+use futures::Stream;
 use std::net::IpAddr;
+use std::pin::Pin;
 use std::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
@@ -18,6 +20,8 @@ pub(crate) struct WallGuardImpl {
 #[tonic::async_trait]
 impl WallGuard for WallGuardImpl {
     type HeartbeatStream = ReceiverStream<Result<HeartbeatResponse, Status>>;
+    type HandlePacketsStream =
+        Pin<Box<dyn Stream<Item = Result<CommonResponse, Status>> + Send + 'static>>;
 
     async fn heartbeat(
         &self,
@@ -30,12 +34,12 @@ impl WallGuard for WallGuardImpl {
     async fn handle_packets(
         &self,
         request: Request<Streaming<Packets>>,
-    ) -> Result<Response<CommonResponse>, Status> {
-        let addr = ServerLogger::extract_address(&request);
-        let received_at = chrono::Utc::now();
+    ) -> Result<Response<Self::HandlePacketsStream>, Status> {
+        // let addr = ServerLogger::extract_address(&request);
+        // let received_at = chrono::Utc::now();
         let result = self.handle_packets_impl(request).await;
-        ServerLogger::log_response(&result, &addr, "/handle_packets", received_at);
-        result.map_err(|e| Status::internal(format!("{e:?}")))
+        // ServerLogger::log_response(&result, &addr, "/handle_packets", received_at);
+        result
     }
 
     async fn handle_config(

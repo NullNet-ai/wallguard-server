@@ -288,7 +288,10 @@ pub mod wall_guard_client {
         pub async fn handle_packets(
             &mut self,
             request: impl tonic::IntoStreamingRequest<Message = super::Packets>,
-        ) -> std::result::Result<tonic::Response<super::CommonResponse>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::CommonResponse>>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -304,7 +307,7 @@ pub mod wall_guard_client {
             let mut req = request.into_streaming_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("wallguard.WallGuard", "HandlePackets"));
-            self.inner.client_streaming(req, path, codec).await
+            self.inner.streaming(req, path, codec).await
         }
         pub async fn handle_config(
             &mut self,
@@ -397,10 +400,19 @@ pub mod wall_guard_server {
             &self,
             request: tonic::Request<super::HeartbeatRequest>,
         ) -> std::result::Result<tonic::Response<Self::HeartbeatStream>, tonic::Status>;
+        /// Server streaming response type for the HandlePackets method.
+        type HandlePacketsStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::CommonResponse, tonic::Status>,
+            >
+            + std::marker::Send
+            + 'static;
         async fn handle_packets(
             &self,
             request: tonic::Request<tonic::Streaming<super::Packets>>,
-        ) -> std::result::Result<tonic::Response<super::CommonResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<Self::HandlePacketsStream>,
+            tonic::Status,
+        >;
         async fn handle_config(
             &self,
             request: tonic::Request<super::ConfigSnapshot>,
@@ -542,13 +554,12 @@ pub mod wall_guard_server {
                 "/wallguard.WallGuard/HandlePackets" => {
                     #[allow(non_camel_case_types)]
                     struct HandlePacketsSvc<T: WallGuard>(pub Arc<T>);
-                    impl<
-                        T: WallGuard,
-                    > tonic::server::ClientStreamingService<super::Packets>
+                    impl<T: WallGuard> tonic::server::StreamingService<super::Packets>
                     for HandlePacketsSvc<T> {
                         type Response = super::CommonResponse;
+                        type ResponseStream = T::HandlePacketsStream;
                         type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
+                            tonic::Response<Self::ResponseStream>,
                             tonic::Status,
                         >;
                         fn call(
@@ -579,7 +590,7 @@ pub mod wall_guard_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.client_streaming(method, req).await;
+                        let res = grpc.streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
