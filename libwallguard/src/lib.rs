@@ -66,7 +66,7 @@ impl WallGuardGrpcInterface {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub async fn handle_packets(&mut self, message: Receiver<Packets>) -> Result<CommonResponse, String> {
+    pub async fn handle_packets(&mut self, message: Receiver<Packets>) -> Result<Streaming<CommonResponse>, String> {
         let stream = ReceiverStream::new(message);
         self.client
             .handle_packets(Request::new(stream))
