@@ -8,7 +8,7 @@ use crate::proto::wallguard::{ControlChannelRequest, ControlChannelResponse};
 use std::net::IpAddr;
 use std::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
-use tonic::{Request, Response, Status};
+use tonic::{Request, Response, Status, Streaming};
 
 pub(crate) struct WallGuardImpl {
     pub(crate) context: AppContext,
@@ -29,7 +29,7 @@ impl WallGuard for WallGuardImpl {
 
     async fn handle_packets(
         &self,
-        request: Request<Packets>,
+        request: Request<Streaming<Packets>>,
     ) -> Result<Response<CommonResponse>, Status> {
         let addr = ServerLogger::extract_address(&request);
         let received_at = chrono::Utc::now();

@@ -287,7 +287,7 @@ pub mod wall_guard_client {
         }
         pub async fn handle_packets(
             &mut self,
-            request: impl tonic::IntoRequest<super::Packets>,
+            request: impl tonic::IntoStreamingRequest<Message = super::Packets>,
         ) -> std::result::Result<tonic::Response<super::CommonResponse>, tonic::Status> {
             self.inner
                 .ready()
@@ -301,10 +301,10 @@ pub mod wall_guard_client {
             let path = http::uri::PathAndQuery::from_static(
                 "/wallguard.WallGuard/HandlePackets",
             );
-            let mut req = request.into_request();
+            let mut req = request.into_streaming_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("wallguard.WallGuard", "HandlePackets"));
-            self.inner.unary(req, path, codec).await
+            self.inner.client_streaming(req, path, codec).await
         }
         pub async fn handle_config(
             &mut self,
@@ -399,7 +399,7 @@ pub mod wall_guard_server {
         ) -> std::result::Result<tonic::Response<Self::HeartbeatStream>, tonic::Status>;
         async fn handle_packets(
             &self,
-            request: tonic::Request<super::Packets>,
+            request: tonic::Request<tonic::Streaming<super::Packets>>,
         ) -> std::result::Result<tonic::Response<super::CommonResponse>, tonic::Status>;
         async fn handle_config(
             &self,
@@ -542,7 +542,9 @@ pub mod wall_guard_server {
                 "/wallguard.WallGuard/HandlePackets" => {
                     #[allow(non_camel_case_types)]
                     struct HandlePacketsSvc<T: WallGuard>(pub Arc<T>);
-                    impl<T: WallGuard> tonic::server::UnaryService<super::Packets>
+                    impl<
+                        T: WallGuard,
+                    > tonic::server::ClientStreamingService<super::Packets>
                     for HandlePacketsSvc<T> {
                         type Response = super::CommonResponse;
                         type Future = BoxFuture<
@@ -551,7 +553,7 @@ pub mod wall_guard_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::Packets>,
+                            request: tonic::Request<tonic::Streaming<super::Packets>>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
@@ -577,7 +579,7 @@ pub mod wall_guard_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
+                        let res = grpc.client_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

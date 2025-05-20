@@ -4,7 +4,7 @@ package wallguard;
 
 service WallGuard {
   rpc Heartbeat (HeartbeatRequest) returns (stream HeartbeatResponse);
-  rpc HandlePackets (Packets) returns (CommonResponse);
+  rpc HandlePackets (stream Packets) returns (CommonResponse);
   rpc HandleConfig (ConfigSnapshot) returns (CommonResponse);
   rpc HandleLogs (Logs) returns (CommonResponse);
   rpc RequestControlChannel (ControlChannelRequest) returns (ControlChannelResponse);
