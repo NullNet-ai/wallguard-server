@@ -1,12 +1,10 @@
-use std::time::Duration;
-use tokio::sync::mpsc::Receiver;
-use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
-use tonic::Request;
-pub use tonic::Streaming;
-use tonic::transport::Channel;
-
 use crate::proto::wallguard::wall_guard_client::WallGuardClient;
 pub use crate::proto::wallguard::*;
+use async_channel::Receiver;
+use std::time::Duration;
+pub use tonic::Streaming;
+use tonic::transport::Channel;
+use tonic::{IntoStreamingRequest, Request};
 
 mod proto;
 
@@ -66,10 +64,12 @@ impl WallGuardGrpcInterface {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub async fn handle_packets(&mut self, message: Receiver<Packets>) -> Result<Streaming<CommonResponse>, String> {
-        let stream = ReceiverStream::new(message);
+    pub async fn handle_packets(
+        &mut self,
+        message: Receiver<Packets>,
+    ) -> Result<Streaming<CommonResponse>, String> {
         self.client
-            .handle_packets(Request::new(stream))
+            .handle_packets(message.into_streaming_request())
             .await
             .map(tonic::Response::into_inner)
             .map_err(|e| e.to_string())
