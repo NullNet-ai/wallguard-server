@@ -1,20 +1,15 @@
+use crate::control_service::service::WallGuardService;
+use crate::protocol::wallguard_commands::ControlChannelRequest;
+use crate::protocol::wallguard_service::wall_guard_server::WallGuard;
+use crate::token_provider::TokenProvider;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-use crate::control_service::service::WallGuardService;
-use crate::protocol::wallguard_commands::WallGuardCommand;
-use crate::protocol::wallguard_service::ControlChannelRequest;
-use crate::protocol::wallguard_service::wall_guard_server::WallGuard;
-use crate::token_provider::TokenProvider;
-
-#[tonic::async_trait]
-impl WallGuard for WallGuardService {
-    type ControlChannelStream = ReceiverStream<Result<WallGuardCommand, Status>>;
-
-    async fn control_channel(
+impl WallGuardService {
+    pub(crate) async fn control_channel_impl(
         &self,
         request: Request<ControlChannelRequest>,
-    ) -> Result<Response<Self::ControlChannelStream>, Status> {
+    ) -> Result<Response<<WallGuardService as WallGuard>::ControlChannelStream>, Status> {
         let request = request.into_inner();
 
         let token_provider = TokenProvider::new(
