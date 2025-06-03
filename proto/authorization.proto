@@ -12,21 +12,12 @@ message AuthorizationRequest {
 message AuthorizationStatus {
   oneof state {
     google.protobuf.Empty pending = 1;
-    AuthorizationRejected rejected = 2;
+    google.protobuf.Empty rejected = 2;
     AuthorizationApproved approved = 3;
   }
 }
 
 message AuthorizationApproved {
-  string app_id = 1;
-  string app_secret = 2;
-}
-
-message AuthorizationRejected {
-  RejectionReason reason = 1;
-}
-
-enum RejectionReason {
-  UUID_IN_USE = 0;
-  ALREADY_CONNECTED = 1;  
+  optional string app_id = 1;
+  optional string app_secret = 2;
 }
