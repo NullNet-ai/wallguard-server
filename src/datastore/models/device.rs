@@ -1,7 +1,7 @@
 use crate::datastore::db_tables::DBTable;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Device {
     #[serde(rename = "device_uuid")]
     pub uuid: String,

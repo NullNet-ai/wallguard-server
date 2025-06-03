@@ -10,6 +10,7 @@ const DEFAULT_HEALTHCHECK_TIME: Duration = Duration::from_secs(15);
 
 pub(crate) type AuthorizationStream = mpsc::Sender<Result<AuthorizationStatus, Status>>;
 
+#[derive(Debug, Clone)]
 pub(crate) struct PendingAuth {
     device_uuid: String,
     complete: broadcast::Sender<()>,
@@ -87,8 +88,10 @@ async fn healthcheck(
                     break;
                 }
             }
-        } => {
-            orchestrator.on_client_authorization_completed(&device_uuid).await;
-        }
-    }
+        } => {}
+    };
+
+    let _ = orchestrator
+        .on_client_authorization_completed(&device_uuid)
+        .await;
 }

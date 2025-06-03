@@ -12,7 +12,6 @@ use crate::token_provider::TokenProvider;
 #[derive(Debug, Clone)]
 pub struct Client {
     device_uuid: String,
-    token_provider: TokenProvider,
     control_stream: ControlStream,
 }
 
@@ -32,7 +31,6 @@ impl Client {
 
         Self {
             device_uuid: device_uuid.into(),
-            token_provider,
             control_stream,
         }
     }

@@ -2,7 +2,6 @@ use crate::control_service::service::WallGuardService;
 use crate::protocol::wallguard_commands::ControlChannelRequest;
 use crate::protocol::wallguard_service::wall_guard_server::WallGuard;
 use crate::token_provider::TokenProvider;
-use nullnet_liberror::{ErrorHandler, Location, location};
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 

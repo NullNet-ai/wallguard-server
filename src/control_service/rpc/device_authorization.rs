@@ -1,4 +1,5 @@
 use crate::control_service::WallGuardService;
+use crate::datastore::Device;
 use crate::protocol::wallguard_authorization::authorization_status::State;
 use crate::protocol::wallguard_authorization::{
     AuthorizationApproved, AuthorizationRequest, AuthorizationStatus,
@@ -64,11 +65,34 @@ impl WallGuardService {
             .map_err(|err| Status::internal(err.to_str()))?;
 
         if device.is_none() {
+            let mut device = Device::default();
+
+            device.authorized = false;
+            device.uuid = device_uuid;
+
+            self.context
+                .datastore
+                .create_device(&systoken.jwt, &device, Some(org_id))
+                .await
+                .map_err(|err| Status::internal(err.to_str()))?;
+
+            self.context
+                .orchestractor
+                .on_client_requested_authorization(&device.uuid, sender)
+                .await
+                .map_err(|err| Status::internal(err.to_str()))?;
+
             Ok(Response::new(ReceiverStream::new(receiver)))
         } else {
             let device = device.unwrap();
 
             if !device.authorized {
+                self.context
+                    .orchestractor
+                    .on_client_requested_authorization(&device_uuid, sender)
+                    .await
+                    .map_err(|err| Status::internal(err.to_str()))?;
+
                 Ok(Response::new(ReceiverStream::new(receiver)))
             } else {
                 let status = AuthorizationStatus {

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 use tonic::Status;
 
+use crate::orchestrator::authorization_stream::{AuthorizationStream, PendingAuth};
 use crate::protocol::wallguard_commands::WallGuardCommand;
 use crate::token_provider::TokenProvider;
 
@@ -13,17 +14,17 @@ mod client;
 mod control_stream;
 
 type ClientsMap = Arc<Mutex<HashMap<String, Client>>>;
+type PendingAuthMap = Arc<Mutex<HashMap<String, PendingAuth>>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Orchestrator {
     clients: ClientsMap,
+    pending_auths: PendingAuthMap,
 }
 
 impl Orchestrator {
     pub fn new() -> Self {
-        let clients = Arc::new(Mutex::new(HashMap::new()));
-
-        Self { clients }
+        Self::default()
     }
 
     pub async fn is_client_connected(&self, device_uuid: &str) -> bool {
@@ -59,16 +60,49 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub async fn is_auth_pending(&self,  device_uuid: &str) -> bool {
-        false
+    pub async fn is_auth_pending(&self, device_uuid: &str) -> bool {
+        self.pending_auths.lock().await.contains_key(device_uuid)
     }
 
-    pub async fn on_client_requested_authorization(&self, device_uuid: &str, org_id: &str) {
+    pub async fn on_client_requested_authorization(
+        &self,
+        device_uuid: &str,
+        stream: AuthorizationStream,
+    ) -> Result<(), Error> {
+        if self.is_auth_pending(device_uuid).await {
+            return Err(format!(
+                "Authorization already pending for device UUID {}",
+                device_uuid
+            ))
+            .handle_err(location!());
+        }
 
+        let auth = PendingAuth::new(device_uuid, stream, self.clone());
+
+        self.pending_auths
+            .lock()
+            .await
+            .insert(device_uuid.into(), auth);
+
+        Ok(())
     }
 
-    pub async fn on_client_authorization_completed(&self, device_uuid: &str) {
+    pub async fn on_client_authorization_completed(&self, device_uuid: &str) -> Result<(), Error> {
+        if self
+            .pending_auths
+            .lock()
+            .await
+            .remove(device_uuid)
+            .is_none()
+        {
+            return Err(format!(
+                "No pending authorization found for device UUID {}",
+                device_uuid
+            ))
+            .handle_err(location!());
+        }
 
+        Ok(())
     }
 
     pub async fn get_client(&self, device_id: &str) -> Option<Client> {
