@@ -44,10 +44,10 @@ impl Datastore {
     pub async fn obtain_device_by_id(
         &self,
         token: &str,
-        device_uuid: &str,
+        device_id: &str,
     ) -> Result<Option<Device>, Error> {
         let request = GetByIdRequestBuilder::new()
-            .id(device_uuid)
+            .id(device_id)
             .pluck(Device::pluck())
             .table(DBTable::Devices)
             .build();

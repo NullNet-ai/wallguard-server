@@ -37,6 +37,8 @@ impl Orchestrator {
         token_provider: TokenProvider,
         control_stream: mpsc::Sender<Result<WallGuardCommand, Status>>,
     ) -> Result<(), Error> {
+        log::debug!("Client connected UUID {}", device_uuid);
+
         if self.is_client_connected(device_uuid).await {
             let message = format!("Client with UUID '{device_uuid}' is already connected");
             return Err(message).handle_err(location!())?;
@@ -50,6 +52,8 @@ impl Orchestrator {
     }
 
     pub async fn on_client_disconnected(&self, device_uuid: &str) -> Result<(), Error> {
+        log::debug!("Client disconnected UUID {}", device_uuid);
+
         if self.clients.lock().await.remove(device_uuid).is_none() {
             Err(format!(
                 "Device with UUID '{}' is not connected",
@@ -69,6 +73,8 @@ impl Orchestrator {
         device_uuid: &str,
         stream: AuthorizationStream,
     ) -> Result<(), Error> {
+        log::debug!("Client requested authorization UUID {}", device_uuid);
+
         if self.is_auth_pending(device_uuid).await {
             return Err(format!(
                 "Authorization already pending for device UUID {}",
@@ -88,6 +94,8 @@ impl Orchestrator {
     }
 
     pub async fn on_client_authorization_completed(&self, device_uuid: &str) -> Result<(), Error> {
+        log::debug!("Client authorization completed UUID {}", device_uuid);
+
         if self
             .pending_auths
             .lock()
@@ -105,7 +113,11 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub async fn get_client(&self, device_id: &str) -> Option<Client> {
-        self.clients.lock().await.get(device_id).cloned()
+    pub async fn get_client(&self, device_uuid: &str) -> Option<Client> {
+        self.clients.lock().await.get(device_uuid).cloned()
+    }
+
+    pub async fn get_pending_auth(&self, device_uuid: &str) -> Option<PendingAuth> {
+        self.pending_auths.lock().await.get(device_uuid).cloned()
     }
 }
