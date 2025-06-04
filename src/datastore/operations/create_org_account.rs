@@ -3,6 +3,7 @@ use crate::datastore::builders::CreateRequestBuilder;
 use crate::datastore::db_tables::DBTable;
 use crate::utilities;
 
+use actix_web::cookie::time::util;
 use nullnet_liberror::{Error, ErrorHandler, Location, location};
 use nullnet_libtoken::Token;
 use serde_json::json;
@@ -17,16 +18,17 @@ impl Datastore {
     ) -> Result<(), Error> {
         let token = Token::from_jwt(token).handle_err(location!())?;
 
+        
         let record: serde_json::Value = json!({
             "account_id": app_id,
             "account_secret": utilities::hash::hash_secret(app_secret).unwrap(),
             "organization_id": &token.account.organization_id,
             "categories": vec!["Device"],
-            "device_id": device_id
+            "device_id": device_id,
         });
 
         let request = CreateRequestBuilder::new()
-            .table(DBTable::OgranizationAccount)
+            .table(DBTable::OgranizationAccounts)
             .record(record.to_string())
             .entity_prefix("QA")
             .build();
