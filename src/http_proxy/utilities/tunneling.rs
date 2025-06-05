@@ -74,6 +74,8 @@ async fn establish_tunneled_channel(
         .ok_or_else(|| format!("Client with device ID '{}' is not connected", device_id))
         .handle_err(location!())?;
 
+    let client = client.lock().await;
+
     let (token, receiver) = context.tunnel.expect_connection().await;
 
     match r#type {
