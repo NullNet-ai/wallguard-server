@@ -35,13 +35,13 @@ impl Orchestrator {
         outbound: OutboundStream,
         context: AppContext,
     ) {
-        log::debug!("Orchestrator: on_new_connection");
+        log::info!("Orchestrator: on_new_connection");
         let handler = NewConnectionHandler::new(context);
         tokio::spawn(handler.handle(inbound, outbound));
     }
 
     pub async fn on_disconnected(&self, uuid: &str) -> Result<(), Error> {
-        log::debug!("Orchestrator: on_client_disconnected, uuid {}", uuid);
+        log::info!("Orchestrator: on_client_disconnected, uuid {}", uuid);
 
         if self.clients.lock().await.remove(uuid).is_none() {
             Err(format!("Device with UUID '{}' is not connected", uuid)).handle_err(location!())?;

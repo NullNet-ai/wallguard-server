@@ -15,6 +15,8 @@ pub(crate) async fn control_stream(
     outbound: OutboundStream,
     context: AppContext,
 ) {
+    log::info!("Starting a control stream for device UUID {}", device_uuid);
+
     tokio::select! {
         hres = healthcheck(outbound.clone()) => {
             if let Err(err) = hres {
