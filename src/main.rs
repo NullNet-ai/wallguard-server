@@ -11,6 +11,7 @@ mod protocol;
 mod reverse_tunnel;
 mod token_provider;
 mod utilities;
+mod traffic_handler;
 
 #[tokio::main]
 async fn main() {
