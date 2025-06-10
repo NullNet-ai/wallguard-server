@@ -1,6 +1,8 @@
 use crate::protocol::wallguard_commands::{ClientMessage, ServerMessage};
 use crate::protocol::wallguard_service::wall_guard_server::WallGuardServer;
-use crate::protocol::wallguard_service::{PacketsData, SystemResourcesData};
+use crate::protocol::wallguard_service::{
+    DeviceSettingsRequest, DeviceSettingsResponse, PacketsData, SystemResourcesData,
+};
 use crate::traffic_handler::ip_info::ip_info_handler;
 use crate::{app_context::AppContext, protocol::wallguard_service::wall_guard_server::WallGuard};
 use nullnet_liberror::{Error, ErrorHandler, Location, location};
@@ -77,5 +79,12 @@ impl WallGuard for WallGuardService {
         request: Request<SystemResourcesData>,
     ) -> Result<Response<()>, Status> {
         self.handle_system_resources_data_impl(request).await
+    }
+
+    async fn get_device_settings(
+        &self,
+        request: Request<DeviceSettingsRequest>,
+    ) -> Result<Response<DeviceSettingsResponse>, Status> {
+        self.get_device_settings_impl(request).await
     }
 }

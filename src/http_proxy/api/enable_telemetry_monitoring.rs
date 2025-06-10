@@ -38,10 +38,22 @@ pub async fn enable_telemetry_monitoring(
         return HttpResponse::NotFound().json(ErrorJson::from("Device not found"));
     }
 
-    let device = device.unwrap();
+    let mut device = device.unwrap();
 
     if !device.authorized {
         return HttpResponse::BadRequest().json(ErrorJson::from("Device is not authorized yet"));
+    }
+
+    device.telemetry_monitoring = body.enable;
+
+    if context
+        .datastore
+        .update_device(&jwt, &body.device_id, &device)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError()
+            .json(ErrorJson::from("Failed to update device"));
     }
 
     let Some(client) = context.orchestractor.get_client(&device.uuid).await else {

@@ -73,4 +73,16 @@ impl WallGuardGrpcInterface {
             .handle_err(location!())
             .map(|response| response.into_inner())
     }
+
+    pub async fn get_device_settings(
+        &self,
+        request: DeviceSettingsRequest,
+    ) -> Result<DeviceSettingsResponse, Error> {
+        self.client
+            .clone()
+            .get_device_settings(request)
+            .await
+            .handle_err(location!())
+            .map(|response| response.into_inner())
+    }
 }

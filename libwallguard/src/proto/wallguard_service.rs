@@ -55,6 +55,20 @@ pub struct SystemResource {
     #[prost(string, tag = "11")]
     pub temperatures: ::prost::alloc::string::String,
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DeviceSettingsRequest {
+    #[prost(string, tag = "1")]
+    pub token: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct DeviceSettingsResponse {
+    #[prost(bool, tag = "1")]
+    pub traffic_monitoring: bool,
+    #[prost(bool, tag = "2")]
+    pub telemetry_monitoring: bool,
+    #[prost(bool, tag = "3")]
+    pub config_monitoring: bool,
+}
 /// Generated client implementations.
 pub mod wall_guard_client {
     #![allow(
@@ -176,6 +190,32 @@ pub mod wall_guard_client {
                 );
             self.inner.streaming(req, path, codec).await
         }
+        pub async fn get_device_settings(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DeviceSettingsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DeviceSettingsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/wallguard_service.WallGuard/GetDeviceSettings",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("wallguard_service.WallGuard", "GetDeviceSettings"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn handle_packets_data(
             &mut self,
             request: impl tonic::IntoRequest<super::PacketsData>,
@@ -256,6 +296,13 @@ pub mod wall_guard_server {
             >,
         ) -> std::result::Result<
             tonic::Response<Self::ControlChannelStream>,
+            tonic::Status,
+        >;
+        async fn get_device_settings(
+            &self,
+            request: tonic::Request<super::DeviceSettingsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DeviceSettingsResponse>,
             tonic::Status,
         >;
         async fn handle_packets_data(
@@ -390,6 +437,51 @@ pub mod wall_guard_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/wallguard_service.WallGuard/GetDeviceSettings" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetDeviceSettingsSvc<T: WallGuard>(pub Arc<T>);
+                    impl<
+                        T: WallGuard,
+                    > tonic::server::UnaryService<super::DeviceSettingsRequest>
+                    for GetDeviceSettingsSvc<T> {
+                        type Response = super::DeviceSettingsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DeviceSettingsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as WallGuard>::get_device_settings(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetDeviceSettingsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

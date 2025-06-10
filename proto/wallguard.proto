@@ -7,6 +7,9 @@ import "commands.proto";
 service WallGuard {
   rpc ControlChannel(stream wallguard_commands.ClientMessage)
     returns (stream wallguard_commands.ServerMessage);
+  
+  rpc GetDeviceSettings(DeviceSettingsRequest) 
+    returns (DeviceSettingsResponse);
 
   rpc HandlePacketsData(PacketsData) 
     returns (google.protobuf.Empty);
@@ -46,4 +49,14 @@ message SystemResource {
   int64 written_bytes = 10;
   // will be a map<string, float> once we have Rust datastore
   string temperatures = 11;
+}
+
+message DeviceSettingsRequest {
+  string token = 1;
+}
+
+message DeviceSettingsResponse {
+  bool traffic_monitoring = 1;
+  bool telemetry_monitoring = 2;
+  bool config_monitoring = 3;
 }
