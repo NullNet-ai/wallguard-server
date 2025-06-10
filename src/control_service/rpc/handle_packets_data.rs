@@ -1,8 +1,8 @@
-use nullnet_libtoken::Token;
-use tonic::{Request, Response, Status};
 use crate::control_service::service::WallGuardService;
 use crate::protocol::wallguard_service::PacketsData;
 use crate::traffic_handler::msg_parser::parse_message;
+use nullnet_libtoken::Token;
+use tonic::{Request, Response, Status};
 
 impl WallGuardService {
     pub(crate) async fn handle_packets_data_impl(
@@ -18,7 +18,7 @@ impl WallGuardService {
 
         let parsed_message = parse_message(data, &token, &self.ip_info_tx);
 
-        log::trace!(
+        log::info!(
             "Received {} packets. Parsed {} connections",
             packets_number,
             parsed_message.records.len()
